@@ -1,672 +1,1053 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import "./App.css";
 
-const initialTasks = [
+const defaultTasks = [
   {
     id: 1,
-    icon: "🔄",
-    title: "Hybrid Recently Viewed with Cross-Device Sync",
-    category: "Sync",
-    status: "In Progress",
+    code: "SPR-101",
+    title: "Recently Viewed Product Synchronization",
+    category: "Integration",
+    priority: "High",
+    status: "Done",
+    dueDate: "2026-07-24",
     description:
-      "Stores recently viewed items, prevents duplicates and keeps the latest viewed item first."
+      "Synchronizes recently viewed products across user sessions while preventing duplicate product entries."
   },
   {
     id: 2,
-    icon: "🎨",
-    title: "Scalable Theme and Dark Mode Architecture",
+    code: "SPR-102",
+    title: "Dark Mode and Theme Management",
     category: "UI/UX",
-    status: "In Progress",
+    priority: "Medium",
+    status: "Done",
+    dueDate: "2026-07-22",
     description:
-      "Provides light and dark themes and saves the selected theme."
+      "Provides light and dark themes and stores the selected theme preference for future sessions."
   },
   {
     id: 3,
-    icon: "🔔",
-    title: "Event-Driven Push Notification System",
-    category: "Backend",
-    status: "To Do",
+    code: "SPR-103",
+    title: "Event-Driven Notification System",
+    category: "Frontend",
+    priority: "High",
+    status: "Done",
+    dueDate: "2026-07-27",
     description:
-      "Displays browser notifications for task updates and reminders."
+      "Displays notifications for task reminders, status updates and important project events."
   },
   {
     id: 4,
-    icon: "💳",
-    title: "Transaction History with Audit and Export",
-    category: "Payments",
-    status: "To Do",
+    code: "SPR-104",
+    title: "Transaction History and CSV Export",
+    category: "Data",
+    priority: "Medium",
+    status: "Done",
+    dueDate: "2026-07-29",
     description:
-      "Displays transaction history and exports transactions as a CSV file."
+      "Displays task records and enables the complete project data to be exported in CSV format."
   },
   {
     id: 5,
-    icon: "🛒",
-    title: "Concurrency-Safe Cart with Save for Later",
-    category: "Cart",
-    status: "In Progress",
+    code: "SPR-105",
+    title: "Save for Later Workflow",
+    category: "Productivity",
+    priority: "Low",
+    status: "Done",
+    dueDate: "2026-07-26",
     description:
-      "Allows tasks to be saved for later without creating duplicate entries."
+      "Allows selected work items to be saved for later without creating duplicate entries."
   },
   {
     id: 6,
-    icon: "🤖",
-    title: "Scalable Personalization Engine",
-    category: "AI/ML",
-    status: "To Do",
+    code: "SPR-106",
+    title: "Category-Based Recommendation Module",
+    category: "Personalization",
+    priority: "Medium",
+    status: "Done",
+    dueDate: "2026-07-23",
     description:
-      "Recommends similar tasks based on the selected task category."
+      "Recommends relevant tasks and project features according to the selected category."
   }
 ];
 
-const transactions = [
-  {
-    id: "TXN001",
-    item: "Premium Task Plan",
-    amount: 499,
-    status: "Successful",
-    date: "19/07/2026"
-  },
-  {
-    id: "TXN002",
-    item: "Dark Theme Package",
-    amount: 199,
-    status: "Successful",
-    date: "18/07/2026"
-  },
-  {
-    id: "TXN003",
-    item: "Notification Service",
-    amount: 299,
-    status: "Pending",
-    date: "17/07/2026"
-  }
-];
+const emptyForm = {
+  title: "",
+  category: "Frontend",
+  priority: "Medium",
+  status: "Done",
+  dueDate: "",
+  description: ""
+};
 
-export default function App() {
+const statuses = ["To Do", "In Progress", "Done"];
+
+function App() {
   const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem("sprintTasks");
-    return saved ? JSON.parse(saved) : initialTasks;
-  });
+    try {
+      const savedTasks = localStorage.getItem("sprintflowTasks");
 
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("darkMode") === "true";
+      if (savedTasks) {
+        return JSON.parse(savedTasks);
+      }
+
+      return defaultTasks;
+    } catch (error) {
+      console.error("Unable to load saved tasks:", error);
+      return defaultTasks;
+    }
   });
 
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("All");
-  const [expandedTask, setExpandedTask] = useState(null);
-
-  const [recentlyViewed, setRecentlyViewed] = useState(() => {
-    const saved = localStorage.getItem("recentlyViewed");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [savedForLater, setSavedForLater] = useState(() => {
-    const saved = localStorage.getItem("savedForLater");
-    return saved ? JSON.parse(saved) : [];
-  });
-
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [priorityFilter, setPriorityFilter] = useState("All");
+  const [darkMode, setDarkMode] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
-    localStorage.setItem("sprintTasks", JSON.stringify(tasks));
+    localStorage.setItem("sprintflowTasks", JSON.stringify(tasks));
   }, [tasks]);
 
-  useEffect(() => {
-    localStorage.setItem("darkMode", darkMode);
-  }, [darkMode]);
+  const statistics = useMemo(() => {
+    const total = tasks.length;
 
-  useEffect(() => {
-    localStorage.setItem(
-      "recentlyViewed",
-      JSON.stringify(recentlyViewed)
-    );
-  }, [recentlyViewed]);
+    const todo = tasks.filter(
+      (task) => task.status === "To Do"
+    ).length;
 
-  useEffect(() => {
-    localStorage.setItem(
-      "savedForLater",
-      JSON.stringify(savedForLater)
-    );
-  }, [savedForLater]);
+    const inProgress = tasks.filter(
+      (task) => task.status === "In Progress"
+    ).length;
 
-  const updateStatus = (taskId, newStatus) => {
-    setTasks(
-      tasks.map((task) =>
-        task.id === taskId
-          ? { ...task, status: newStatus }
+    const completed = tasks.filter(
+      (task) => task.status === "Done"
+    ).length;
+
+    const percentage =
+      total === 0 ? 0 : Math.round((completed / total) * 100);
+
+    return {
+      total,
+      todo,
+      inProgress,
+      completed,
+      percentage
+    };
+  }, [tasks]);
+
+  const filteredTasks = useMemo(() => {
+    const searchValue = search.trim().toLowerCase();
+
+    return tasks.filter((task) => {
+      const matchesSearch =
+        !searchValue ||
+        task.title.toLowerCase().includes(searchValue) ||
+        task.code.toLowerCase().includes(searchValue) ||
+        task.category.toLowerCase().includes(searchValue) ||
+        task.description.toLowerCase().includes(searchValue);
+
+      const matchesStatus =
+        statusFilter === "All" ||
+        task.status === statusFilter;
+
+      const matchesPriority =
+        priorityFilter === "All" ||
+        task.priority === priorityFilter;
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesPriority
+      );
+    });
+  }, [tasks, search, statusFilter, priorityFilter]);
+
+  function updateTaskStatus(id, newStatus) {
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              status: newStatus
+            }
           : task
       )
     );
-  };
 
-  const viewTask = (task) => {
-    setExpandedTask(expandedTask === task.id ? null : task.id);
-    setSelectedTask(task);
+    if (selectedTask && selectedTask.id === id) {
+      setSelectedTask({
+        ...selectedTask,
+        status: newStatus
+      });
+    }
+  }
 
-    setRecentlyViewed((previous) => {
-      const withoutDuplicate = previous.filter(
-        (item) => item.id !== task.id
+  function handleFormChange(event) {
+    const { name, value } = event.target;
+
+    setForm((currentForm) => ({
+      ...currentForm,
+      [name]: value
+    }));
+  }
+
+  function addTask(event) {
+    event.preventDefault();
+
+    if (
+      !form.title.trim() ||
+      !form.dueDate ||
+      !form.description.trim()
+    ) {
+      alert(
+        "Please enter the task title, due date and description."
       );
-
-      return [task, ...withoutDuplicate].slice(0, 5);
-    });
-  };
-
-  const saveTaskForLater = (task) => {
-    setSavedForLater((previous) => {
-      const alreadySaved = previous.some(
-        (item) => item.id === task.id
-      );
-
-      if (alreadySaved) {
-        alert("Task is already saved.");
-        return previous;
-      }
-
-      return [...previous, task];
-    });
-  };
-
-  const removeSavedTask = (taskId) => {
-    setSavedForLater(
-      savedForLater.filter((task) => task.id !== taskId)
-    );
-  };
-
-  const showNotification = async () => {
-    if (!("Notification" in window)) {
-      alert("Your browser does not support notifications.");
       return;
     }
 
-    const permission = await Notification.requestPermission();
+    const newId =
+      tasks.length === 0
+        ? 1
+        : Math.max(...tasks.map((task) => task.id)) + 1;
 
-    if (permission === "granted") {
-      new Notification("Sprint Task Reminder", {
-        body: "You have sprint tasks waiting for completion."
-      });
-    } else {
-      alert("Notification permission was not granted.");
+    const newTask = {
+      id: newId,
+      code: `SPR-${100 + newId}`,
+      title: form.title.trim(),
+      category: form.category,
+      priority: form.priority,
+      status: form.status,
+      dueDate: form.dueDate,
+      description: form.description.trim()
+    };
+
+    setTasks((currentTasks) => [
+      newTask,
+      ...currentTasks
+    ]);
+
+    setForm(emptyForm);
+    setShowForm(false);
+  }
+
+  function deleteTask(id) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this task?"
+    );
+
+    if (!confirmed) {
+      return;
     }
-  };
 
-  const exportTransactions = () => {
+    setTasks((currentTasks) =>
+      currentTasks.filter((task) => task.id !== id)
+    );
+
+    setSelectedTask(null);
+  }
+
+  function resetTasks() {
+    const confirmed = window.confirm(
+      "Reset the project to the original six completed tasks?"
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setTasks(defaultTasks);
+    setSearch("");
+    setStatusFilter("All");
+    setPriorityFilter("All");
+    setSelectedTask(null);
+
+    localStorage.setItem(
+      "sprintflowTasks",
+      JSON.stringify(defaultTasks)
+    );
+  }
+
+  function markAllTasksComplete() {
+    const completedTasks = tasks.map((task) => ({
+      ...task,
+      status: "Done"
+    }));
+
+    setTasks(completedTasks);
+    setSelectedTask(null);
+  }
+
+  function exportTasks() {
+    if (tasks.length === 0) {
+      alert("No tasks are available to export.");
+      return;
+    }
+
     const rows = [
-      ["Transaction ID", "Item", "Amount", "Status", "Date"],
-      ...transactions.map((transaction) => [
-        transaction.id,
-        transaction.item,
-        transaction.amount,
-        transaction.status,
-        transaction.date
+      [
+        "Task Code",
+        "Task Title",
+        "Category",
+        "Priority",
+        "Status",
+        "Due Date",
+        "Description"
+      ],
+      ...tasks.map((task) => [
+        task.code,
+        task.title,
+        task.category,
+        task.priority,
+        task.status,
+        task.dueDate,
+        task.description
       ])
     ];
 
-    const csv = rows.map((row) => row.join(",")).join("\n");
+    const csvContent = rows
+      .map((row) =>
+        row
+          .map((value) => {
+            const safeValue = String(
+              value ?? ""
+            ).replace(/"/g, '""');
 
-    const blob = new Blob([csv], {
-      type: "text/csv;charset=utf-8"
-    });
+            return `"${safeValue}"`;
+          })
+          .join(",")
+      )
+      .join("\n");
+
+    const blob = new Blob(
+      ["\uFEFF" + csvContent],
+      {
+        type: "text/csv;charset=utf-8;"
+      }
+    );
 
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "transaction-history.csv";
+    link.download = "sprintflow-completed-tasks.csv";
+
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
 
     URL.revokeObjectURL(url);
-  };
-
-  const filteredTasks = tasks.filter((task) => {
-    const matchesSearch = task.title
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const matchesFilter =
-      filter === "All" || task.status === filter;
-
-    return matchesSearch && matchesFilter;
-  });
-
-  const doneCount = tasks.filter(
-    (task) => task.status === "Done"
-  ).length;
-
-  const progress = Math.round(
-    (doneCount / tasks.length) * 100
-  );
-
-  const recommendations = selectedTask
-    ? tasks
-        .filter(
-          (task) =>
-            task.id !== selectedTask.id &&
-            task.category !== selectedTask.category
-        )
-        .slice(0, 3)
-    : tasks.slice(0, 3);
-
-  const styles = {
-    app: {
-      minHeight: "100vh",
-      padding: "30px",
-      fontFamily: "Arial, sans-serif",
-      background: darkMode ? "#111827" : "#f5f3ee",
-      color: darkMode ? "#f9fafb" : "#172033"
-    },
-    container: {
-      maxWidth: "1100px",
-      margin: "auto"
-    },
-    topBar: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "15px",
-      flexWrap: "wrap",
-      marginBottom: "20px"
-    },
-    button: {
-      padding: "10px 16px",
-      border: "none",
-      borderRadius: "10px",
-      cursor: "pointer",
-      fontWeight: "bold"
-    },
-    card: {
-      background: darkMode ? "#1f2937" : "#ffffff",
-      border: darkMode
-        ? "1px solid #374151"
-        : "1px solid #d9d5cc",
-      borderRadius: "16px",
-      padding: "20px",
-      marginBottom: "15px",
-      boxShadow: "0 3px 10px rgba(0,0,0,0.05)"
-    },
-    summaryGrid: {
-      display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
-      gap: "15px",
-      marginBottom: "20px"
-    },
-    summaryBox: {
-      background: darkMode ? "#1f2937" : "#ffffff",
-      padding: "18px",
-      borderRadius: "14px",
-      textAlign: "center"
-    },
-    controls: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      marginBottom: "20px"
-    },
-    input: {
-      flex: "1",
-      minWidth: "220px",
-      padding: "12px",
-      borderRadius: "10px",
-      border: "1px solid #ccc",
-      fontSize: "16px"
-    },
-    taskHeader: {
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      gap: "15px",
-      cursor: "pointer"
-    },
-    badge: {
-      padding: "7px 12px",
-      borderRadius: "15px",
-      background: "#e7f1ff",
-      color: "#075ea8",
-      fontWeight: "bold"
-    },
-    statusButtons: {
-      display: "flex",
-      gap: "10px",
-      flexWrap: "wrap",
-      marginTop: "15px"
-    },
-    table: {
-      width: "100%",
-      borderCollapse: "collapse"
-    },
-    cell: {
-      border: darkMode
-        ? "1px solid #4b5563"
-        : "1px solid #ddd",
-      padding: "10px",
-      textAlign: "left"
-    }
-  };
+  }
 
   return (
-    <div style={styles.app}>
-      <div style={styles.container}>
-        <div style={styles.topBar}>
+    <div
+      className={
+        darkMode ? "app dark-theme" : "app"
+      }
+    >
+      <aside className="sidebar">
+        <div className="logo-section">
+          <div className="logo">SF</div>
+
           <div>
-            <h1>📁 Sprint Tasks</h1>
-            <p>Complete all project features and track progress.</p>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px" }}>
-            <button
-              style={{
-                ...styles.button,
-                background: "#7c3aed",
-                color: "white"
-              }}
-              onClick={() => setDarkMode(!darkMode)}
-            >
-              {darkMode ? "☀ Light Mode" : "🌙 Dark Mode"}
-            </button>
-
-            <button
-              style={{
-                ...styles.button,
-                background: "#0284c7",
-                color: "white"
-              }}
-              onClick={showNotification}
-            >
-              🔔 Test Notification
-            </button>
+            <h2>SprintFlow</h2>
+            <p>Project Workspace</p>
           </div>
         </div>
 
-        <div style={styles.card}>
-          <h2>{progress}% Complete</h2>
-
-          <div
-            style={{
-              height: "14px",
-              background: darkMode ? "#374151" : "#e5e7eb",
-              borderRadius: "20px",
-              overflow: "hidden"
-            }}
+        <nav className="navigation">
+          <button
+            type="button"
+            className="nav-button active"
           >
+            <span>▦</span>
+            Dashboard
+          </button>
+
+          <button
+            type="button"
+            className="nav-button"
+          >
+            <span>✓</span>
+            Sprint Tasks
+          </button>
+
+          <button
+            type="button"
+            className="nav-button"
+          >
+            <span>◷</span>
+            Activity
+          </button>
+
+          <button
+            type="button"
+            className="nav-button"
+          >
+            <span>⚙</span>
+            Settings
+          </button>
+        </nav>
+
+        <div className="sidebar-project">
+          <p className="small-label">
+            CURRENT PROJECT
+          </p>
+
+          <h3>E-Commerce Feature Sprint</h3>
+
+          <p>
+            Final-year academic software engineering
+            project
+          </p>
+
+          <div className="sidebar-progress">
             <div
               style={{
-                width: `${progress}%`,
-                height: "100%",
-                background: "#16a34a",
-                transition: "0.3s"
+                width: `${statistics.percentage}%`
               }}
             />
           </div>
+
+          <span>
+            {statistics.percentage}% completed
+          </span>
         </div>
 
-        <div style={styles.summaryGrid}>
-          <div style={styles.summaryBox}>
-            <h2>{tasks.length}</h2>
-            <p>All Tasks</p>
+        <div className="profile">
+          <div className="profile-avatar">
+            TS
           </div>
 
-          <div style={styles.summaryBox}>
-            <h2>
-              {
-                tasks.filter(
-                  (task) => task.status === "In Progress"
-                ).length
-              }
-            </h2>
-            <p>In Progress</p>
-          </div>
-
-          <div style={styles.summaryBox}>
-            <h2>
-              {
-                tasks.filter(
-                  (task) => task.status === "To Do"
-                ).length
-              }
-            </h2>
-            <p>To Do</p>
-          </div>
-
-          <div style={styles.summaryBox}>
-            <h2>{doneCount}</h2>
-            <p>Done</p>
+          <div>
+            <strong>Tulika Shreya</strong>
+            <span>Project Developer</span>
           </div>
         </div>
+      </aside>
 
-        <div style={styles.controls}>
-          <input
-            style={styles.input}
-            placeholder="Search tasks..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-
-          {["All", "In Progress", "To Do", "Done"].map(
-            (status) => (
-              <button
-                key={status}
-                style={{
-                  ...styles.button,
-                  background:
-                    filter === status ? "#111827" : "#ffffff",
-                  color:
-                    filter === status ? "#ffffff" : "#111827",
-                  border: "1px solid #ccc"
-                }}
-                onClick={() => setFilter(status)}
-              >
-                {status}
-              </button>
-            )
-          )}
-        </div>
-
-        {filteredTasks.map((task) => (
-          <div key={task.id} style={styles.card}>
-            <div
-              style={styles.taskHeader}
-              onClick={() => viewTask(task)}
-            >
-              <div>
-                <h2
-                  style={{
-                    textDecoration:
-                      task.status === "Done"
-                        ? "line-through"
-                        : "none"
-                  }}
-                >
-                  {task.icon} {task.title}
-                </h2>
-
-                <span style={styles.badge}>
-                  {task.category}
-                </span>
-              </div>
-
-              <div>
-                <span style={styles.badge}>{task.status}</span>
-                <span style={{ marginLeft: "10px" }}>
-                  {expandedTask === task.id ? "▲" : "▼"}
-                </span>
-              </div>
-            </div>
-
-            {expandedTask === task.id && (
-              <div style={{ marginTop: "18px" }}>
-                <p>{task.description}</p>
-
-                <div style={styles.statusButtons}>
-                  {["To Do", "In Progress", "Done"].map(
-                    (status) => (
-                      <button
-                        key={status}
-                        style={{
-                          ...styles.button,
-                          background:
-                            task.status === status
-                              ? "#16a34a"
-                              : "#e5e7eb",
-                          color:
-                            task.status === status
-                              ? "white"
-                              : "#111827"
-                        }}
-                        onClick={() =>
-                          updateStatus(task.id, status)
-                        }
-                      >
-                        {status}
-                      </button>
-                    )
-                  )}
-
-                  <button
-                    style={{
-                      ...styles.button,
-                      background: "#f59e0b",
-                      color: "white"
-                    }}
-                    onClick={() => saveTaskForLater(task)}
-                  >
-                    🛒 Save for Later
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ))}
-
-        <div style={styles.card}>
-          <h2>🕘 Recently Viewed</h2>
-
-          {recentlyViewed.length === 0 ? (
-            <p>Open a task to add it here.</p>
-          ) : (
-            recentlyViewed.map((task) => (
-              <p key={task.id}>
-                {task.icon} {task.title}
-              </p>
-            ))
-          )}
-        </div>
-
-        <div style={styles.card}>
-          <h2>🛒 Saved for Later</h2>
-
-          {savedForLater.length === 0 ? (
-            <p>No saved tasks.</p>
-          ) : (
-            savedForLater.map((task) => (
-              <div
-                key={task.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "10px"
-                }}
-              >
-                <span>
-                  {task.icon} {task.title}
-                </span>
-
-                <button
-                  style={{
-                    ...styles.button,
-                    background: "#dc2626",
-                    color: "white"
-                  }}
-                  onClick={() => removeSavedTask(task.id)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div style={styles.card}>
-          <h2>🤖 You May Also Like</h2>
-
-          {recommendations.map((task) => (
-            <p key={task.id}>
-              {task.icon} {task.title}
+      <main className="main-content">
+        <header className="page-header">
+          <div>
+            <p className="small-label">
+              SPRINT MANAGEMENT
             </p>
-          ))}
-        </div>
 
-        <div style={styles.card}>
-          <div style={styles.topBar}>
-            <h2>💳 Transaction History</h2>
+            <h1>Project Dashboard</h1>
+
+            <p className="page-subtitle">
+              Manage project tasks, priorities,
+              deadlines and implementation progress.
+            </p>
+          </div>
+
+          <div className="header-buttons">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() =>
+                setDarkMode((currentMode) => !currentMode)
+              }
+            >
+              {darkMode
+                ? "☀ Light mode"
+                : "☾ Dark mode"}
+            </button>
 
             <button
-              style={{
-                ...styles.button,
-                background: "#16a34a",
-                color: "white"
-              }}
-              onClick={exportTransactions}
+              type="button"
+              className="primary-button"
+              onClick={() => setShowForm(true)}
             >
-              Export CSV
+              + Add new task
             </button>
           </div>
+        </header>
 
-          <div style={{ overflowX: "auto" }}>
-            <table style={styles.table}>
+        <section className="stats-grid">
+          <article className="stat-card">
+            <div className="stat-icon">
+              ▤
+            </div>
+
+            <div>
+              <p>Total tasks</p>
+              <h2>{statistics.total}</h2>
+              <span>Defined sprint scope</span>
+            </div>
+          </article>
+
+          <article className="stat-card">
+            <div className="stat-icon">
+              ○
+            </div>
+
+            <div>
+              <p>To do</p>
+              <h2>{statistics.todo}</h2>
+              <span>Waiting to begin</span>
+            </div>
+          </article>
+
+          <article className="stat-card">
+            <div className="stat-icon">
+              ◔
+            </div>
+
+            <div>
+              <p>In progress</p>
+              <h2>
+                {statistics.inProgress}
+              </h2>
+              <span>Currently active</span>
+            </div>
+          </article>
+
+          <article className="stat-card completed-card">
+            <div className="stat-icon">
+              ✓
+            </div>
+
+            <div>
+              <p>Completed</p>
+              <h2>
+                {statistics.completed}
+              </h2>
+              <span>
+                {statistics.percentage}% completion
+              </span>
+            </div>
+          </article>
+        </section>
+
+        <section className="progress-section">
+          <div>
+            <p className="small-label">
+              SPRINT HEALTH
+            </p>
+
+            <h2>
+              {statistics.percentage}% completed
+            </h2>
+
+            <p>
+              {statistics.completed} of{" "}
+              {statistics.total} tasks are complete.
+            </p>
+          </div>
+
+          <div className="main-progress">
+            <div
+              style={{
+                width: `${statistics.percentage}%`
+              }}
+            />
+          </div>
+
+          <div className="progress-values">
+            <span>
+              To do: {statistics.todo}
+            </span>
+
+            <span>
+              In progress:{" "}
+              {statistics.inProgress}
+            </span>
+
+            <span>
+              Done: {statistics.completed}
+            </span>
+          </div>
+        </section>
+
+        <section className="task-workspace">
+          <div className="workspace-heading">
+            <div>
+              <h2>Sprint Tasks</h2>
+
+              <p>
+                Track and update all project
+                implementation tasks.
+              </p>
+            </div>
+
+            <div className="workspace-buttons">
+              <button
+                type="button"
+                className="small-button export-button"
+                onClick={exportTasks}
+              >
+                ↓ Export CSV
+              </button>
+
+              <button
+                type="button"
+                className="small-button"
+                onClick={markAllTasksComplete}
+              >
+                ✓ Complete All
+              </button>
+
+              <button
+                type="button"
+                className="small-button reset-button"
+                onClick={resetTasks}
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+
+          <div className="filters">
+            <div className="search-box">
+              <span>⌕</span>
+
+              <input
+                type="text"
+                placeholder="Search by task, code or category"
+                value={search}
+                onChange={(event) =>
+                  setSearch(event.target.value)
+                }
+              />
+            </div>
+
+            <select
+              value={statusFilter}
+              onChange={(event) =>
+                setStatusFilter(event.target.value)
+              }
+            >
+              <option value="All">
+                All statuses
+              </option>
+
+              {statuses.map((status) => (
+                <option
+                  key={status}
+                  value={status}
+                >
+                  {status}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={priorityFilter}
+              onChange={(event) =>
+                setPriorityFilter(event.target.value)
+              }
+            >
+              <option value="All">
+                All priorities
+              </option>
+
+              <option value="High">
+                High
+              </option>
+
+              <option value="Medium">
+                Medium
+              </option>
+
+              <option value="Low">
+                Low
+              </option>
+            </select>
+          </div>
+
+          <div className="task-table-wrapper">
+            <table className="task-table">
               <thead>
                 <tr>
-                  <th style={styles.cell}>Transaction ID</th>
-                  <th style={styles.cell}>Item</th>
-                  <th style={styles.cell}>Amount</th>
-                  <th style={styles.cell}>Status</th>
-                  <th style={styles.cell}>Date</th>
+                  <th>Task</th>
+                  <th>Category</th>
+                  <th>Priority</th>
+                  <th>Due date</th>
+                  <th>Status</th>
+                  <th>Details</th>
                 </tr>
               </thead>
 
               <tbody>
-                {transactions.map((transaction) => (
-                  <tr key={transaction.id}>
-                    <td style={styles.cell}>
-                      {transaction.id}
+                {filteredTasks.map((task) => (
+                  <tr key={task.id}>
+                    <td>
+                      <button
+                        type="button"
+                        className="task-title-button"
+                        onClick={() =>
+                          setSelectedTask(task)
+                        }
+                      >
+                        <span>
+                          {task.code}
+                        </span>
+
+                        <strong>
+                          {task.title}
+                        </strong>
+                      </button>
                     </td>
-                    <td style={styles.cell}>
-                      {transaction.item}
+
+                    <td>
+                      <span className="category-badge">
+                        {task.category}
+                      </span>
                     </td>
-                    <td style={styles.cell}>
-                      ₹{transaction.amount}
+
+                    <td>
+                      <span
+                        className={`priority-badge ${task.priority.toLowerCase()}`}
+                      >
+                        {task.priority}
+                      </span>
                     </td>
-                    <td style={styles.cell}>
-                      {transaction.status}
+
+                    <td>
+                      {task.dueDate}
                     </td>
-                    <td style={styles.cell}>
-                      {transaction.date}
+
+                    <td>
+                      <select
+                        className={`status-dropdown ${task.status
+                          .toLowerCase()
+                          .replaceAll(" ", "-")}`}
+                        value={task.status}
+                        onChange={(event) =>
+                          updateTaskStatus(
+                            task.id,
+                            event.target.value
+                          )
+                        }
+                      >
+                        {statuses.map((status) => (
+                          <option
+                            key={status}
+                            value={status}
+                          >
+                            {status}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+
+                    <td>
+                      <button
+                        type="button"
+                        className="details-button"
+                        onClick={() =>
+                          setSelectedTask(task)
+                        }
+                      >
+                        →
+                      </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        </div>
 
-        <button
-          style={{
-            ...styles.button,
-            width: "100%",
-            background: "#dc2626",
-            color: "white",
-            marginTop: "10px"
-          }}
-          onClick={() => {
-            localStorage.clear();
-            setTasks(initialTasks);
-            setRecentlyViewed([]);
-            setSavedForLater([]);
-            setDarkMode(false);
-          }}
+            {filteredTasks.length === 0 && (
+              <div className="empty-state">
+                <h3>No tasks found</h3>
+
+                <p>
+                  Try changing the search text or
+                  selected filters.
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <footer className="footer">
+          <span>
+            SprintFlow Academic Project
+          </span>
+
+          <span>
+            React.js • Local Storage • CSV Export •
+            Responsive Design
+          </span>
+        </footer>
+      </main>
+
+      {selectedTask && (
+        <div
+          className="modal-background"
+          onClick={() =>
+            setSelectedTask(null)
+          }
         >
-          Reset Application
-        </button>
-      </div>
+          <article
+            className="task-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <button
+              type="button"
+              className="close-button"
+              onClick={() =>
+                setSelectedTask(null)
+              }
+            >
+              ×
+            </button>
+
+            <p className="small-label">
+              {selectedTask.code}
+            </p>
+
+            <h2>
+              {selectedTask.title}
+            </h2>
+
+            <p className="modal-description">
+              {selectedTask.description}
+            </p>
+
+            <div className="modal-grid">
+              <div>
+                <span>Category</span>
+                <strong>
+                  {selectedTask.category}
+                </strong>
+              </div>
+
+              <div>
+                <span>Priority</span>
+                <strong>
+                  {selectedTask.priority}
+                </strong>
+              </div>
+
+              <div>
+                <span>Due date</span>
+                <strong>
+                  {selectedTask.dueDate}
+                </strong>
+              </div>
+
+              <div>
+                <span>Status</span>
+                <strong>
+                  {selectedTask.status}
+                </strong>
+              </div>
+            </div>
+
+            <div className="modal-status-buttons">
+              {statuses.map((status) => (
+                <button
+                  type="button"
+                  key={status}
+                  className={
+                    selectedTask.status === status
+                      ? "modal-status-button active"
+                      : "modal-status-button"
+                  }
+                  onClick={() =>
+                    updateTaskStatus(
+                      selectedTask.id,
+                      status
+                    )
+                  }
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="delete-button"
+              onClick={() =>
+                deleteTask(selectedTask.id)
+              }
+            >
+              Delete task
+            </button>
+          </article>
+        </div>
+      )}
+
+      {showForm && (
+        <div
+          className="modal-background"
+          onClick={() =>
+            setShowForm(false)
+          }
+        >
+          <form
+            className="task-form"
+            onSubmit={addTask}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+            <button
+              type="button"
+              className="close-button"
+              onClick={() =>
+                setShowForm(false)
+              }
+            >
+              ×
+            </button>
+
+            <p className="small-label">
+              NEW TASK
+            </p>
+
+            <h2>
+              Create Sprint Task
+            </h2>
+
+            <label className="full-field">
+              Task title
+
+              <input
+                type="text"
+                name="title"
+                placeholder="Enter task title"
+                value={form.title}
+                onChange={handleFormChange}
+              />
+            </label>
+
+            <div className="form-grid">
+              <label>
+                Category
+
+                <select
+                  name="category"
+                  value={form.category}
+                  onChange={handleFormChange}
+                >
+                  <option value="Frontend">
+                    Frontend
+                  </option>
+
+                  <option value="Backend">
+                    Backend
+                  </option>
+
+                  <option value="Integration">
+                    Integration
+                  </option>
+
+                  <option value="UI/UX">
+                    UI/UX
+                  </option>
+
+                  <option value="Data">
+                    Data
+                  </option>
+
+                  <option value="Testing">
+                    Testing
+                  </option>
+
+                  <option value="Productivity">
+                    Productivity
+                  </option>
+
+                  <option value="Personalization">
+                    Personalization
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                Priority
+
+                <select
+                  name="priority"
+                  value={form.priority}
+                  onChange={handleFormChange}
+                >
+                  <option value="High">
+                    High
+                  </option>
+
+                  <option value="Medium">
+                    Medium
+                  </option>
+
+                  <option value="Low">
+                    Low
+                  </option>
+                </select>
+              </label>
+
+              <label>
+                Status
+
+                <select
+                  name="status"
+                  value={form.status}
+                  onChange={handleFormChange}
+                >
+                  {statuses.map((status) => (
+                    <option
+                      key={status}
+                      value={status}
+                    >
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                Due date
+
+                <input
+                  type="date"
+                  name="dueDate"
+                  value={form.dueDate}
+                  onChange={handleFormChange}
+                />
+              </label>
+            </div>
+
+            <label className="full-field">
+              Description
+
+              <textarea
+                rows="4"
+                name="description"
+                placeholder="Enter task description"
+                value={form.description}
+                onChange={handleFormChange}
+              />
+            </label>
+
+            <div className="form-buttons">
+              <button
+                type="button"
+                className="secondary-button"
+                onClick={() =>
+                  setShowForm(false)
+                }
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="primary-button"
+              >
+                Create task
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
+
+export default App;
